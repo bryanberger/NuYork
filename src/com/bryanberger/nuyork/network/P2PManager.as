@@ -11,6 +11,8 @@ package com.bryanberger.nuyork.network
 	import flash.net.NetGroup;
 	import flash.net.NetStream;
 	
+	import org.osflash.signals.Signal;
+	
 	
 	[Event(name="complete",type="flash.events.Event")]
 	[Event(name="status",type="flash.events.StatusEvent")]
@@ -19,15 +21,14 @@ package com.bryanberger.nuyork.network
 	
 	public class P2PManager extends EventDispatcher
 	{
-		[Bindable]
-		public var connected:Boolean = false;
+		private var _connected:Boolean;
 		
 		public var netConnection:NetConnection;
 		public var netStream_out:NetStream;
 		
 		private var _seq:int;
 		private var spec:GroupSpecifier;
-		
+		private var connected:Signal;
 		
 		[Bindable]
 		public var netGroup:NetGroup;
@@ -59,11 +60,13 @@ package com.bryanberger.nuyork.network
 					break;
 				
 				case "NetConnection.Connect.Closed":
-					connected = false;
+					_connected = false;
 					break;
 				
 				case "NetGroup.Connect.Success":
-					connected = true;
+					_connected = true;
+				//	connected.dispatch();
+					
 					//onGroupConnected();
 					break;
 				

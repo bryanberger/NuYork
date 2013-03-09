@@ -2,6 +2,7 @@ package com.bryanberger.nuyork.states
 {
 	import com.bryanberger.nuyork.core.Constants;
 	import com.bryanberger.nuyork.network.P2PManager;
+	import com.bryanberger.nuyork.objects.Robot;
 	
 	import flash.events.StatusEvent;
 	import flash.geom.Rectangle;
@@ -10,6 +11,7 @@ package com.bryanberger.nuyork.states
 	
 	import citrus.core.CitrusEngine;
 	import citrus.core.starling.StarlingState;
+	import citrus.input.controllers.Keyboard;
 	import citrus.input.controllers.starling.VirtualJoystick;
 	import citrus.math.MathVector;
 	import citrus.objects.CitrusSprite;
@@ -36,13 +38,15 @@ package com.bryanberger.nuyork.states
 	{
 		
 		private var _ce:CitrusEngine;
-		private var _user:Hero;
-		private var _anims:Array = ["walk", "idle", "jump", "jump_fire", "duck"];
+		private var _user:Robot;
+		private var _anims:Array = ["walk", "idle", "jump", "fire", "zjump_fire", "skid", "duck"];
+		private var _loopedAnims:Array = ["walk", "idle", "jump", "fire", "zjump_fire", "skid", "duck"];
 		private var _assets:AssetManager;
 		private var _camera:StarlingCamera;
 		private var _w:int;
 		private var _h:int;
 		private var _deathSensor:Sensor;
+		private var _channelId:uint = int( Math.random() * (99999 - 1) + 1 );
 		
 		// multiplayer
 		private var _p2p:P2PManager;
@@ -71,40 +75,50 @@ package com.bryanberger.nuyork.states
 			box2D.visible = true;
 			add(box2D);
 			
-			//add(new Platform("bottom", {x:1748/2, y:800-100, width:1748}));
 			
 //			var bitmap:Bitmap = new robot();
 //			var texture:Texture = Texture.fromBitmap(bitmap);
 //			var xml:XML = XML(new robot_xml());
 //			var sTextureAtlas:TextureAtlas = new TextureAtlas(texture, xml);
 			
-			/// load level here from XML
-			addLevel();
+
+			var joystick:VirtualJoystick = new VirtualJoystick('joystick');
+			
+			setupLevel();
 			setupMultiplayer();
-			
+			setupUser();
+			setupInput();
+		}
+		
+		private function setupUser():void
+		{
 			var params:Object = { x:100, y:350, offsetY:5, hurtVelocityX:12, hurtVelocityY:18, hurtDuration:500, 
-				width:67, height:83, acceleration:1.3, maxVelocity:6, friction:1, jumpHeight:16};	
+				width:175, height:173, acceleration:1.3, maxVelocity:8, friction:0.95, jumpHeight:16};	
 			
-			_user = new Hero("hero", params);
+			_user = new Robot("user", params);
 			_user.view = new AnimationSequence(_assets.getTextureAtlas('robot'), _anims, "idle", 24, true);;
+			_user.inputChannel = _channelId; //int(_p2p.netConnection.nearID);
 			add(_user);
 			
-			StarlingArt.setLoopAnimations(_anims);
+			StarlingArt.setLoopAnimations(_loopedAnims);
 			
-			// camera
 			_camera = view.camera as StarlingCamera;
 			var bounds:Rectangle = new Rectangle(0, 0, Constants.FULL_WIDTH, Constants.FULL_HEIGHT);
-			_camera.setUp(_user, new MathVector(_w >> 1, 0), bounds, new MathVector(0.9, 0));
-//			_camera.allowZoom = true;
-//			_camera.setZoom(1.1);
-			
-			var joystick:VirtualJoystick = new VirtualJoystick('joystick');
-			//view.camera.setUp(_user, new MathVector(480, 280), new Rectangle(0, 0, 1136, 640), new MathVector(0.5, 0));
+			_camera.setUp(_user, new MathVector(Constants.IPHONE_WIDTH>>1, 0), bounds, new MathVector(0.9, 0));
+		}
+		
+		private function setupInput():void
+		{
+			var keyboard:Keyboard = _ce.input.keyboard;
+			keyboard.addKeyAction("left", Keyboard.LEFT, _user.inputChannel); 
+			keyboard.addKeyAction("right", Keyboard.RIGHT, _user.inputChannel); 
+			keyboard.addKeyAction("jump", Keyboard.UP, _user.inputChannel); 
+			keyboard.addKeyAction("fire", Keyboard.SPACE, _user.inputChannel); 
 		}
 		
 		private function setupMultiplayer():void
 		{
-			_users = new Vector.<Hero>();
+			//_users = new Vector.<Hero>();
 			
 			// we connect to Union Platform server test, 130ms latency (too bad for a physics game), but thanks Union for this cool/quick service.
 			_p2p = new P2PManager();
@@ -112,7 +126,7 @@ package com.bryanberger.nuyork.states
 			_p2p.connect();
 		}
 		
-		private function addLevel():void
+		private function setupLevel():void
 		{
 			// level construct
 			var bg:CitrusSprite = new CitrusSprite('background', {registration: 'topLeft', x:0, y:0, parallax:0.5, view: new Image(_assets.getTexture('background'))});
@@ -138,7 +152,7 @@ package com.bryanberger.nuyork.states
 			
 			// moving platforms
 			var bridge:MovingPlatform = new MovingPlatform('bridge', {registration: 'center', speed:1.4, startX:(Constants.FULL_WIDTH >> 1)-200, endX:(Constants.FULL_WIDTH >> 1)+200, 
-				x:(Constants.FULL_WIDTH >> 1)-100, endY:600, y:600, width:398, height:10, offsetY:-10, parallax:1.0, view: new Image(_assets.getTexture('bridge'))});
+				x:(Constants.FULL_WIDTH >> 1)-100, endY:500, y:500, width:398, height:10, offsetY:-10, parallax:1.0, view: new Image(_assets.getTexture('bridge'))});
 			add(bridge);
 			
 			// complex
