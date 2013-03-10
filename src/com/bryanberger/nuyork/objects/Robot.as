@@ -15,7 +15,8 @@ package com.bryanberger.nuyork.objects
 		public var shooting:Boolean;
 		public var shootDelayDuration:uint = 300;
 		public var onShoot:Signal;
-
+		public var onMove:Signal;
+		
 		protected var _shootTimeoutID:Number;
 		protected var _canShoot:Boolean;
 		protected var _dead:Boolean;
@@ -25,6 +26,16 @@ package com.bryanberger.nuyork.objects
 		public function Robot(name:String, params:Object=null)
 		{
 			super(name, params);
+			
+			onMove = new Signal();
+			_playerMovingHero = false;
+		}
+		
+		public function forceMoveRight():void
+		{
+			var velocity:b2Vec2 = _body.GetLinearVelocity();
+			velocity.Add(getSlopeBasedMoveAngle());
+			// moveKeyPressed = true;
 		}
 		
 		override public function update(timeDelta:Number):void
@@ -63,11 +74,11 @@ package com.bryanberger.nuyork.objects
 				shooting = false;
 							
 				// JUMP
-//				if (_onGround && (_ce.input.justDid('jump', inputChannel)) )
-//				{
-//					velocity.y = -jumpHeight;
-//					onJump.dispatch();
-//				}
+				if (_onGround && (_ce.input.justDid('jump', inputChannel)) )
+				{
+					velocity.y = -jumpHeight;
+					onJump.dispatch();
+				}
 				
 				// MOVE RIGHT
 				if ( (_ce.input.isDoing('right', inputChannel)) )
@@ -88,6 +99,9 @@ package com.bryanberger.nuyork.objects
 				//If player just started moving the hero this tick.
 				if (moveKeyPressed && !_playerMovingHero)
 				{
+//					trace('move key pressed');
+//					
+//					onMove.dispatch();
 					_playerMovingHero = true;
 					_fixture.SetFriction(0); //Take away friction so he can accelerate.
 				}
@@ -172,6 +186,7 @@ package com.bryanberger.nuyork.objects
 			}
 			else if( (!_onGround && shooting) || (!_onGround && _spaceBarDown ) )
 			{
+				trace('jumpfire');
 				_animation = "zjump_fire";
 			}
 			else if( (_onGround && shooting) || (_onGround && _spaceBarDown ) )
@@ -195,11 +210,15 @@ package com.bryanberger.nuyork.objects
 				{
 					_inverted = true;	
 					_animation = "walk";
+					
+					//onMove.dispatch();
 				}
 				else if(walkingSpeed > acceleration)
 				{
 					_inverted = false;
 					_animation = "walk";
+					
+					//onMove.dispatch();
 				}
 				else
 				{

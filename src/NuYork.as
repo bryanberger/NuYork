@@ -5,13 +5,13 @@ package
 	
 	import flash.display.Bitmap;
 	import flash.display.StageAlign;
+	import flash.display.StageQuality;
 	import flash.display.StageScaleMode;
 	import flash.events.Event;
 	
 	import citrus.core.starling.StarlingCitrusEngine;
 	
 	import starling.core.Starling;
-	import starling.display.Image;
 	import starling.events.Event;
 	import starling.utils.AssetManager;
 	
@@ -31,6 +31,7 @@ package
 		{		
 			this.stage.scaleMode = StageScaleMode.NO_SCALE;
 			this.stage.align = StageAlign.LEFT;
+			this.stage.quality = StageQuality.LOW;
 			
 			this.addEventListener(flash.events.Event.ADDED_TO_STAGE, init);	
 			Starling.multitouchEnabled = true;
@@ -40,9 +41,9 @@ package
 		{
 			this.removeEventListener(flash.events.Event.ADDED_TO_STAGE, init);
 			
-			setUpStarling(true);
+			setUpStarling(false, 0);
 			
-			Starling.current.addEventListener(starling.events.Event.ROOT_CREATED, handleStarlingRootCreated);
+			this.starling.addEventListener(starling.events.Event.ROOT_CREATED, handleStarlingRootCreated);
 			
 			_loadingScreen = new loadingScreen()
 			addChild(_loadingScreen);
@@ -52,12 +53,13 @@ package
 		
 		private function handleStarlingRootCreated(e:starling.events.Event):void
 		{
+			this.starling.removeEventListener(starling.events.Event.ROOT_CREATED, handleStarlingRootCreated);			
+			this.starling.simulateMultitouch = false;
+			this.starling.showStats = true;
+			
 			assets = new AssetManager(1, false);
 			assets.enqueue(EmbededAssets);
 			assets.loadQueue(handleLoadProgress);
-			
-//			state = new BattleState();
-			
 		}
 		
 		private function handleLoadProgress(ratio:Number):void
@@ -69,7 +71,31 @@ package
 				//start	
 				state = new BattleState();
 				removeChild(_loadingScreen);
+				_loadingScreen = null;
 			}
+		}
+		
+		
+		/**
+		 * Override for testing purposes only 
+		 * @param e
+		 * 
+		 */		
+		override protected function handleStageDeactivated(e:flash.events.Event):void
+		{
+			
+		
+		}
+		
+		/**
+		 * Override for testing purposes only 
+		 * @param e
+		 * 
+		 */			
+		override protected function handleStageActivated(e:flash.events.Event):void
+		{
+			
+		
 		}
 		
 	}

@@ -1,15 +1,16 @@
 package com.bryanberger.nuyork.network
 {
+	import com.bryanberger.nuyork.core.MessageVO;
+	
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.events.IEventDispatcher;
 	import flash.events.NetStatusEvent;
 	import flash.events.StatusEvent;
-	import flash.media.Microphone;
+	import flash.geom.Point;
 	import flash.net.GroupSpecifier;
 	import flash.net.NetConnection;
 	import flash.net.NetGroup;
-	import flash.net.NetStream;
 	
 	import org.osflash.signals.Signal;
 	
@@ -24,23 +25,45 @@ package com.bryanberger.nuyork.network
 		private var _connected:Boolean;
 		
 		public var netConnection:NetConnection;
-		public var netStream_out:NetStream;
+		public var netGroup:NetGroup;
 		
 		private var _seq:int;
 		private var spec:GroupSpecifier;
-		private var connected:Signal;
+		public var connected:Signal;
+		public var newPlayerConnected:Signal;
+		public var newPlayerDisconnect:Signal;
+		public var movePlayer:Signal;
+		private var _coords:Point = new Point();
 		
-		[Bindable]
-		public var netGroup:NetGroup;
+		public var joinTime:int;
 		
 		private const SERVER:String = "rtmfp:";
 		private const DEVKEY:String = "3542f8bb100b2e652000797f-0b5cb2bc795b";
+		private var _channelId:uint = int( Math.random() * (99999 - 1) + 1 );
+		public var msg:MessageVO;
 		
 		public function P2PManager(target:IEventDispatcher=null)
 		{
 			super(target);
+			
+			connected = new Signal(int);
+			newPlayerConnected = new Signal(MessageVO);
+			newPlayerDisconnect = new Signal(MessageVO);
+			movePlayer = new Signal(MessageVO);
+			
+			msg = new MessageVO();
 		}
 		
+		public function get channelId():uint
+		{
+			return _channelId;
+		}
+
+		public function set channelId(value:uint):void
+		{
+			_channelId = value;
+		}
+
 		public function connect():void
 		{
 			netConnection = new NetConnection();
@@ -48,10 +71,24 @@ package com.bryanberger.nuyork.network
 			netConnection.connect( SERVER );
 		}
 		
+		public function sendCoords(x:Number, y:Number):void
+		{		
+			msg.channelId = _channelId;
+			//	msg.coords = new Point(BattleState.user.x, BattleState.user.y);
+			msg.sequence = _seq++;
+			msg.x = x;
+			msg.y = y;
+			msg.type = "move";
+			
+			// send to peer
+			//netGroup.sendToNearest(msg, 'com.bryanberger.nuyork');
+			netGroup.sendToAllNeighbors(msg);
+		}
+		
 		
 		protected function netStatus(event:NetStatusEvent):void
 		{
-			log(event.info.code);
+			//log(event.info.code);
 			
 			switch(event.info.code)
 			{
@@ -65,26 +102,67 @@ package com.bryanberger.nuyork.network
 				
 				case "NetGroup.Connect.Success":
 					_connected = true;
-				//	connected.dispatch();
 					
+					joinTime = new Date().getTime();
+					
+					//connected.dispatch(netGroup.neighborCount);
+					sendHandshake();
 					//onGroupConnected();
 					break;
 				
 				case "NetGroup.Neighbor.Connect":
-					//sendMessage();
-					neighborChange();
+					
+					
+					// sendHandshake to peers
+					sendHandshake();
+					
+					// listen for their handshake
+					
+					
+					// neighborChange();
 					break;
 				
 				case "NetGroup.Neigbhor.Disconnect":
-					neighborChange();
+					
+					//neighborChange();
 					break;
 				
 				case "NetConnection.Connect.NetworkChange":
-					neighborChange();
+					//neighborChange();
 					break;
 				
 				case "NetGroup.SendTo.Notify":
-					sendMessage(event.info.message);
+					
+					if(event.info.message.channelId == _channelId)
+						break;
+					
+					switch(event.info.message.type)
+					{
+						case "handshake":
+							//var msg:MessageVO = new MessageVO();
+							msg.channelId = event.info.message.channelId;
+							msg.x = event.info.message.x;
+							msg.y = event.info.message.y;
+							msg.sequence = event.info.message.sequence;
+							msg.joinTime = event.info.message.joinTime;
+							msg.type = event.info.message.type;
+							
+							newPlayerConnected.dispatch(msg);
+						break;
+						
+						case "move":						
+							//var msg2:MessageVO = new MessageVO();
+							msg.channelId = event.info.message.channelId;
+							msg.x = event.info.message.x;
+							msg.y = event.info.message.y;
+							msg.sequence = event.info.message.sequence;
+							//msg2.joinTime = event.info.message.joinTime;
+							msg.type = event.info.message.type;
+							
+							movePlayer.dispatch(msg);
+						break;
+					}
+					//sendMessage(event.info.message);
 					break;
 				
 						
@@ -93,36 +171,22 @@ package com.bryanberger.nuyork.network
 			}
 		}
 		
-		protected function onGroupConnected():void
-		{		
-			// setup netstream
-			netStream_out = new NetStream(netConnection, spec.groupspecWithAuthorizations());
-			//netStream_out = new NetStream(netConnection, NetStream.DIRECT_CONNECTIONS);
-			netStream_out.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
-
-		}
-		
-		private function sendMessage(msg:String):void
+		private function sendHandshake():void
 		{
-			log('Sending message');
+			var msg:MessageVO = new MessageVO();
+			msg.channelId = _channelId;
+		//	msg.coords = new Point(BattleState.user.x, BattleState.user.y);
+			msg.sequence = _seq++;
+			msg.joinTime = joinTime;
+			msg.type = "handshake";
 			
-			var message:Object = new Object();
-			message.sender = netConnection.nearID;
-			//message.sender = netGroup.convertPeerIDToGroupAddress(netConnection.nearID);
-			//			message.user = txtUser.text;
-			message.text = msg;
-			message.sequence = _seq++; // *to keep unique
-			
-			netGroup.sendToAllNeighbors(message);
-			//netGroup.post(message);
-			//receiveMessage(message);
+			// send to peer
+			netGroup.sendToAllNeighbors(msg);
 		}
-		
+	
 		
 		protected function setupGroup():void
-		{
-			log("setupGroup");
-			
+		{		
 			spec = new GroupSpecifier("com.bryanberger.nuyork");
 			spec.multicastEnabled = true;
 			spec.postingEnabled = true;
@@ -137,20 +201,7 @@ package com.bryanberger.nuyork.network
 			netGroup = new NetGroup(netConnection, spec.groupspecWithAuthorizations());
 			netGroup.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
 		}
-		
-		protected function neighborChange():void
-		{
-			log('neighbor_change');
-			var e:StatusEvent = new StatusEvent(StatusEvent.STATUS, false, false, "neighbor_change", netGroup.estimatedMemberCount.toString());
-			dispatchEvent(e);	
-		}
-		
-		protected function log(str:String):void
-		{
-			trace(str);
-//			var e:StatusEvent = new StatusEvent(StatusEvent.STATUS, false, false, "status", str);
-//			dispatchEvent(e);
-		}
+
 		
 	} // END CLASS
 } // END PACKAGE

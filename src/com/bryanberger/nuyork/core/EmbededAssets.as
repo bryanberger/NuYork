@@ -16,9 +16,12 @@ package com.bryanberger.nuyork.core
 		// Texture Atlas		
 		[Embed(source="/textures/robot.xml", mimeType="application/octet-stream")]
 		public static const robot_xml:Class;
-		[Embed(source="/textures/robot.png")]
-		public static const robot:Class;
 		
+		[Embed(source="/textures/robot.atf", mimeType="application/octet-stream")]
+		public static const robot:Class;
+//		[Embed(source="/textures/robot.png")]
+//		public static const robot:Class;
+				
 		// level layers
 		[Embed(source="/textures/background.png")]
 		public static const background:Class;
@@ -43,6 +46,12 @@ package com.bryanberger.nuyork.core
 		
 		[Embed(source="/textures/bridge.png")]
 		public static const bridge:Class;
+		
+		[Embed(source="/textures/box.png")]
+		public static const box:Class;
+		
+		[Embed(source="/textures/cone.png")]
+		public static const cone:Class;
 		
 		// straight up bitmaps
 
