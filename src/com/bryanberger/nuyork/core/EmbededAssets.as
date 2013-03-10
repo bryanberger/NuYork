@@ -52,8 +52,6 @@ package com.bryanberger.nuyork.core
 		
 		[Embed(source="/textures/cone.png")]
 		public static const cone:Class;
-		
-		// straight up bitmaps
 
 		// Compressed textures		
 		//		[Embed(source = "/textures/batesia.atf", mimeType="application/octet-stream")]
